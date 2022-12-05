@@ -1,8 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csproj", "{43A88FD0-2758-49CE-AC2E-B9A61A5DB756}"
+	ProjectSection(ProjectDependencies) = postProject
+		{993C4C46-9352-49D0-A272-552BB9368D2B} = {993C4C46-9352-49D0-A272-552BB9368D2B}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{1508A163-5F50-41D7-B652-E6C20A0E7B05}"
+	ProjectSection(ProjectDependencies) = postProject
+		{993C4C46-9352-49D0-A272-552BB9368D2B} = {993C4C46-9352-49D0-A272-552BB9368D2B}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{993C4C46-9352-49D0-A272-552BB9368D2B}"
 EndProject
