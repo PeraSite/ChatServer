@@ -61,7 +61,15 @@ public class ChatServer {
 						break;
 					}
 					case PacketType.Server_Handshake:
+						break;
 					case PacketType.Server_Text:
+						break;
+					case PacketType.Client_PlayerList:
+						playerConnection.SendPacket(
+							new ServerPlayerListPacket(_playerConnections.Select(connection => connection.Player)
+								.ToList()));
+						break;
+					case PacketType.Server_PlayerList:
 						break;
 					default:
 						throw new ArgumentOutOfRangeException();
@@ -91,6 +99,8 @@ public class ChatServer {
 		Console.Out.WriteLine("New player joined : {0}", player);
 		playerConnection.Player = player;
 		playerConnection.SendPacket(new ServerHandshakePacket(player));
+		playerConnection.SendPacket(
+			new ServerPlayerListPacket(_playerConnections.Select(connection => connection.Player).ToList()));
 	}
 
 	private void HandleClientTextPacket(TcpClient client, ClientTextPacket packet) {

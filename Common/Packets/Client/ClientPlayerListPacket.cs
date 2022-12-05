@@ -2,7 +2,7 @@
 
 namespace Packets.Client;
 
-public record ClientRequestPlayerListPacket : IPacket {
+public record ClientPlayerListPacket : IPacket {
 	public PacketType GetPacketType() {
 		return PacketType.Client_PlayerList;
 	}

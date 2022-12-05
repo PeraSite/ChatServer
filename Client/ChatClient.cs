@@ -44,6 +44,16 @@ public class ChatClient {
 						Console.WriteLine($"Setting Player to {packet.Player}");
 						break;
 					}
+					case PacketType.Client_Handshake:
+						break;
+					case PacketType.Client_PlayerList:
+						break;
+					case PacketType.Server_PlayerList: {
+						var packet = new ServerPlayerListPacket(_reader);
+						Console.Out.WriteLine("Player List:");
+						packet.Players.ForEach(targetPlayer => { Console.Out.WriteLine($"- {targetPlayer.Name}"); });
+						break;
+					}
 					default:
 						throw new ArgumentOutOfRangeException();
 				}
@@ -57,8 +67,15 @@ public class ChatClient {
 		while (true) {
 			var line = Console.ReadLine();
 			if (string.IsNullOrEmpty(line)) break;
-			var packet = new ClientTextPacket(line);
-			SendPacket(packet);
+			if (line.StartsWith("/")) {
+				var command = line[1..];
+				if (command.StartsWith("list")) {
+					SendPacket(new ClientPlayerListPacket());
+				}
+			} else {
+				var packet = new ClientTextPacket(line);
+				SendPacket(packet);
+			}
 		}
 	}
 
