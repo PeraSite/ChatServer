@@ -2,23 +2,14 @@
 
 namespace Packets.Client;
 
-public record ClientTextPacket(int Index, string Text) : IPacket {
-	public int Index { get; private set; } = Index;
-	public string Text { get; private set; } = Text;
-
-	public ClientTextPacket() : this(0, string.Empty) { }
+public record ClientTextPacket(string Text) : IPacket {
+	public ClientTextPacket(BinaryReader reader) : this(reader.ReadString()) { }
 
 	public PacketType GetPacketType() {
-		return PacketType.TEXT;
+		return PacketType.Client_Text;
 	}
 
 	public void Serialize(BinaryWriter writer) {
-		writer.Write(Index);
 		writer.Write(Text);
-	}
-
-	public void Deserialize(BinaryReader reader) {
-		Index = reader.ReadInt32();
-		Text = reader.ReadString();
 	}
 }

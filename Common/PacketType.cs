@@ -1,3 +1,4 @@
-﻿public enum PacketType {
-	TEXT = 1
+﻿public enum PacketType : byte {
+	Client_Text = 1,
+	Server_Text = 2,
 }
