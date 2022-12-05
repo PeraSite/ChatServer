@@ -98,7 +98,7 @@ public class ChatServer {
 		if (player == null) return;
 
 		// Broadcast to other players
-		foreach (var otherPlayerConnection in _playerConnections.Where(x => x.Player != player)) {
+		foreach (var otherPlayerConnection in _playerConnections) {
 			otherPlayerConnection.SendPacket(new ServerTextPacket(player, packet.Text));
 		}
 	}

@@ -6,4 +6,11 @@ const int SERVER_PORT = 9000;
 Console.InputEncoding = Encoding.Unicode;
 Console.OutputEncoding = Encoding.Unicode;
 
-var client = new ChatClient($"Client #{Random.Shared.Next(100)}", SERVERIP, SERVER_PORT);
+Console.Out.Write("닉네임을 적어주세요:");
+var name = Console.ReadLine();
+if (string.IsNullOrEmpty(name)) {
+	Console.Out.WriteLine("올바르지 않은 이름입니다.");
+	return;
+}
+
+var client = new ChatClient(name, SERVERIP, SERVER_PORT);
