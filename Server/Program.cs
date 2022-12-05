@@ -39,7 +39,7 @@ static void ProcessClient(TcpClient tcpClient) {
 
 			switch (packetType) {
 				case PacketType.TEXT:
-					var packet = new TextPacket();
+					var packet = new ClientTextPacket();
 					packet.Deserialize(reader);
 					Console.WriteLine("[TCP/{0}:{1}] {2}th: {3}", clientAddress.Address, clientAddress.Port,
 						packet.Index,

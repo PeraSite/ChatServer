@@ -22,7 +22,7 @@ public class ChatClient {
 		while (true) {
 			var line = Console.ReadLine();
 			if (string.IsNullOrEmpty(line)) break;
-			var packet = new TextPacket(counter++, line);
+			var packet = new ClientTextPacket(counter++, line);
 			WritePacket(packet);
 		}
 	}
