@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using Common;
+using Common.Objects;
 using Packets.Client;
 using Packets.Server;
 
@@ -10,7 +11,9 @@ public class ChatClient {
 	private readonly BinaryReader _reader;
 	private readonly BinaryWriter _writer;
 
-	public ChatClient(string ip, int port) {
+	private Player _player;
+
+	public ChatClient(string name, string ip, int port) {
 		_client = new TcpClient();
 		_client.Connect(ip, port);
 
@@ -19,7 +22,7 @@ public class ChatClient {
 		_reader = new BinaryReader(_stream);
 
 		// Start listening for incoming packets
-		Task.Factory.StartNew(() => {
+		Task.Run(() => {
 			while (true) {
 				var packetID = _reader.ReadByte();
 				var packetType = (PacketType) packetID;
@@ -32,14 +35,24 @@ public class ChatClient {
 					}
 					case PacketType.Server_Text: {
 						var packet = new ServerTextPacket(_reader);
-						Console.WriteLine($"[{packet.Player}] {packet.Text}");
+						Console.WriteLine($"{packet.Player.Name}: {packet.Text}");
+						break;
+					}
+					case PacketType.Server_Handshake: {
+						var packet = new ServerHandshakePacket(_reader);
+						_player = packet.Player;
+						Console.WriteLine($"Setting Player to {packet.Player}");
 						break;
 					}
 					default:
 						throw new ArgumentOutOfRangeException();
 				}
 			}
+		}).ContinueWith(t => {
+			if (t.IsFaulted) throw t.Exception!;
 		});
+
+		SendPacket(new ClientHandshakePacket(name));
 
 		while (true) {
 			var line = Console.ReadLine();

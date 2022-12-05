@@ -4,7 +4,7 @@ using Common;
 using Common.Objects;
 
 public class PlayerConnection {
-	public Player Player { get; }
+	public Player? Player { get; set; }
 	public TcpClient Client { get; }
 
 	public NetworkStream Stream { get; }
@@ -22,8 +22,20 @@ public class PlayerConnection {
 		Reader = new BinaryReader(Stream);
 	}
 
+	public PlayerConnection(TcpClient client) {
+		Client = client;
+
+		Stream = Client.GetStream();
+		Writer = new BinaryWriter(Stream);
+		Reader = new BinaryReader(Stream);
+	}
+
 	public void SendPacket(IPacket packet) {
-		Console.Out.WriteLine($"[S -> C] {IP.Address} {packet}");
+		Console.Out.WriteLine($"[S -> C({GetPlayerName()})] {packet}");
 		packet.Write(Writer);
+	}
+
+	private string GetPlayerName() {
+		return Player?.Name ?? $"{IP.Address}:{IP.Port}";
 	}
 }

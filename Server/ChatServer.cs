@@ -6,18 +6,21 @@ using Packets.Server;
 
 public class ChatServer {
 	private readonly TcpListener _server;
-	private Dictionary<Player, PlayerConnection> _playerConnection;
+	private List<PlayerConnection> _playerConnections;
 
 	public ChatServer(int port) {
 		_server = new TcpListener(IPAddress.Any, port);
-		_playerConnection = new Dictionary<Player, PlayerConnection>();
+		_playerConnections = new List<PlayerConnection>();
 
 		_server.Start();
 		Console.WriteLine("[TCP 서버] 서버 시작: 포트 번호 = {0}", port);
 		try {
 			while (true) {
-				var tcpClient = _server.AcceptTcpClient();
-				Task.Run(() => HandleNewClient(tcpClient));
+				var client = _server.AcceptTcpClient();
+				Task.Run(() => HandleNewClient(client))
+					.ContinueWith(t => {
+						if (t.IsFaulted) throw t.Exception!;
+					});
 			}
 		} catch (Exception e) {
 			Console.WriteLine(e);
@@ -30,28 +33,34 @@ public class ChatServer {
 		_server.Stop();
 	}
 
-	private void HandleNewClient(TcpClient tcpClient) {
-		var player = new Player(Guid.NewGuid());
-		var playerConnection = new PlayerConnection(player, tcpClient);
-		_playerConnection[player] = playerConnection;
+	private void HandleNewClient(TcpClient client) {
+		var playerConnection = new PlayerConnection(client);
+		_playerConnections.Add(playerConnection);
 
-		var address = playerConnection.IP;
-
+		var ip = playerConnection.IP;
 		var reader = playerConnection.Reader;
 
-		Console.WriteLine("\n[TCP 서버] 클라이언트 접속: IP 주소={0}, 포트번호 = {1}", address.Address, address.Port);
+		Console.WriteLine("\n[TCP 서버] 클라이언트 접속: IP 주소={0}, 포트번호 = {1}", ip.Address, ip.Port);
 		try {
 			while (true) {
 				var packetID = reader.ReadByte();
 				var packetType = (PacketType) packetID;
 
+				Console.Out.WriteLine("[C -> S] 패킷 ID: {0}", packetType);
 				//TODO: Dictionary<PacketType, PacketHandler>로 쉽게 register/unregister하게. 아래 switch 부분은 패킷 추가할때마다 기존 코드를 수정할 부분이 생김
 
 				switch (packetType) {
-					case PacketType.Client_Text:
+					case PacketType.Client_Text: {
 						var packet = new ClientTextPacket(reader);
-						HandleClientTextPacket(player, packet);
+						HandleClientTextPacket(client, packet);
 						break;
+					}
+					case PacketType.Client_Handshake: {
+						var packet = new ClientHandshakePacket(reader);
+						HandleClientHandshakePacket(playerConnection, packet);
+						break;
+					}
+					case PacketType.Server_Handshake:
 					case PacketType.Server_Text:
 						break;
 					default:
@@ -62,26 +71,39 @@ public class ChatServer {
 			Console.WriteLine(e);
 			throw;
 		} finally {
-			OnPlayerQuit(tcpClient, playerConnection);
+			OnPlayerQuit(client);
 		}
 	}
 
-	private void OnPlayerQuit(TcpClient tcpClient, PlayerConnection playerConnection) {
-		var player = playerConnection.Player;
+	private void OnPlayerQuit(TcpClient client) {
+		var playerConnection = GetPlayerConnection(client);
+		if (playerConnection == null) return;
+
 		var address = playerConnection.IP;
 
-		_playerConnection.Remove(player);
-		tcpClient.Close();
+		_playerConnections.Remove(playerConnection);
+		client.Close();
 		Console.WriteLine("[TCP 서버] 클라이언트 종료: IP 주소={0}, 포트 번호={1}", address.Address, address.Port);
 	}
 
-	private void HandleClientTextPacket(Player player, ClientTextPacket packet) {
-		Console.Out.WriteLine($"[C -> S] {packet}");
+	private void HandleClientHandshakePacket(PlayerConnection playerConnection, ClientHandshakePacket packet) {
+		var player = new Player(packet.Name, Guid.NewGuid());
+		Console.Out.WriteLine("New player joined : {0}", player);
+		playerConnection.Player = player;
+		playerConnection.SendPacket(new ServerHandshakePacket(player));
+	}
+
+	private void HandleClientTextPacket(TcpClient client, ClientTextPacket packet) {
+		var player = GetPlayerConnection(client)?.Player;
+		if (player == null) return;
 
 		// Broadcast to other players
-		foreach (var (otherPlayer, otherPlayerConnection) in
-		         _playerConnection.Where(pair => !pair.Key.Equals(player))) {
+		foreach (var otherPlayerConnection in _playerConnections.Where(x => x.Player != player)) {
 			otherPlayerConnection.SendPacket(new ServerTextPacket(player, packet.Text));
 		}
+	}
+
+	private PlayerConnection? GetPlayerConnection(TcpClient client) {
+		return _playerConnections.FirstOrDefault(x => x.Client == client);
 	}
 }
