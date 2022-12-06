@@ -30,7 +30,7 @@ public class ChatClient {
 				switch (packetType) {
 					case PacketType.Client_Text: {
 						var packet = new ClientTextPacket(_reader);
-						Console.WriteLine($"[S -> C] {packet}");
+						Debug.Log($"[S -> C] {packet}");
 						break;
 					}
 					case PacketType.Server_Text: {
@@ -41,7 +41,7 @@ public class ChatClient {
 					case PacketType.Server_Handshake: {
 						var packet = new ServerHandshakePacket(_reader);
 						_player = packet.Player;
-						Console.WriteLine($"Setting Player to {packet.Player}");
+						Debug.Log($"Setting Player to {packet.Player}");
 						break;
 					}
 					case PacketType.Client_Handshake:
@@ -50,7 +50,7 @@ public class ChatClient {
 						break;
 					case PacketType.Server_PlayerList: {
 						var packet = new ServerPlayerListPacket(_reader);
-						Console.Out.WriteLine("Player List:");
+						Console.Out.WriteLine($"접속한 유저({packet.Players.Count}명) : ");
 						packet.Players.ForEach(targetPlayer => { Console.Out.WriteLine($"- {targetPlayer.Name}"); });
 						break;
 					}
@@ -87,7 +87,7 @@ public class ChatClient {
 	}
 
 	private void SendPacket(IPacket packet) {
-		Console.Out.WriteLine($"[C -> S] {packet}");
+		Debug.Log($"[C -> S] {packet}");
 		packet.Write(_writer);
 	}
 }
