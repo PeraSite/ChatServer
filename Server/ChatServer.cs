@@ -56,35 +56,29 @@ public class ChatServer {
 
 		// 패킷 읽기
 		try {
-			while (true) {
+			while (client.Connected) {
 				// 패킷 ID 읽기
 				var packetID = reader.ReadByte();
 				var packetType = (PacketType) packetID;
 
-				Debug.Log("[C -> S] 패킷 ID: {0}", packetType);
+				// 타입에 맞는 패킷 객체 생성
+				var basePacket = packetType.CreatePacket(reader);
+				Debug.Log($"[C -> S] {basePacket}");
 
-				// ID에 맞게 처리
-				switch (packetType) {
-					case PacketType.Client_Text: {
-						var packet = new ClientTextPacket(reader);
+				// 패킷 타입에 맞게 처리
+				switch (basePacket) {
+					case ClientTextPacket packet: {
 						HandleClientTextPacket(playerConnection, packet);
 						break;
 					}
-					case PacketType.Client_Handshake: {
-						var packet = new ClientHandshakePacket(reader);
+					case ClientHandshakePacket packet: {
 						HandleClientHandshakePacket(playerConnection, packet);
 						break;
 					}
-					case PacketType.Client_PlayerList: {
-						playerConnection.SendPacket(
-							new ServerPlayerListPacket(GetPlayerList()));
+					case ClientPlayerListPacket: {
+						playerConnection.SendPacket(new ServerPlayerListPacket(GetPlayerList()));
 						break;
 					}
-					case PacketType.Server_Handshake:
-					case PacketType.Server_Text:
-					case PacketType.Server_PlayerList:
-					default:
-						break;
 				}
 			}
 		} catch (Exception e) {

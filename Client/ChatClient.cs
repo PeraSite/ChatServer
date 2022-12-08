@@ -11,72 +11,18 @@ public class ChatClient {
 	private readonly BinaryReader _reader;
 	private readonly BinaryWriter _writer;
 
-	private Player _player;
+	private readonly string _name;
+	private Player? _player;
 
 	public ChatClient(string name, string ip, int port) {
+		_name = name;
+
 		_client = new TcpClient();
 		_client.Connect(ip, port);
 
 		_stream = _client.GetStream();
 		_writer = new BinaryWriter(_stream);
 		_reader = new BinaryReader(_stream);
-
-		// Start listening for incoming packets
-		Task.Run(() => {
-			while (true) {
-				var packetID = _reader.ReadByte();
-				var packetType = (PacketType) packetID;
-
-				switch (packetType) {
-					case PacketType.Client_Text: {
-						var packet = new ClientTextPacket(_reader);
-						Debug.Log($"[S -> C] {packet}");
-						break;
-					}
-					case PacketType.Server_Text: {
-						var packet = new ServerTextPacket(_reader);
-						Console.WriteLine($"{packet.Player.Name}: {packet.Text}");
-						break;
-					}
-					case PacketType.Server_Handshake: {
-						var packet = new ServerHandshakePacket(_reader);
-						_player = packet.Player;
-						Debug.Log($"Setting Player to {packet.Player}");
-						break;
-					}
-					case PacketType.Client_Handshake:
-						break;
-					case PacketType.Client_PlayerList:
-						break;
-					case PacketType.Server_PlayerList: {
-						var packet = new ServerPlayerListPacket(_reader);
-						Console.Out.WriteLine($"접속한 유저({packet.Players.Count}명) : ");
-						packet.Players.ForEach(targetPlayer => { Console.Out.WriteLine($"- {targetPlayer.Name}"); });
-						break;
-					}
-					default:
-						throw new ArgumentOutOfRangeException();
-				}
-			}
-		}).ContinueWith(t => {
-			if (t.IsFaulted) throw t.Exception!;
-		});
-
-		SendPacket(new ClientHandshakePacket(name));
-
-		while (true) {
-			var line = Console.ReadLine();
-			if (string.IsNullOrEmpty(line)) break;
-			if (line.StartsWith("/")) {
-				var command = line[1..];
-				if (command.StartsWith("list")) {
-					SendPacket(new ClientPlayerListPacket());
-				}
-			} else {
-				var packet = new ClientTextPacket(line);
-				SendPacket(packet);
-			}
-		}
 	}
 
 	~ChatClient() {
@@ -84,6 +30,70 @@ public class ChatClient {
 		_reader.Close();
 		_stream.Close();
 		_client.Close();
+	}
+
+	public void Start() {
+		// 패킷 리스너 스레드 시작
+		StartListeningPackets();
+
+		// 클라이언트의 name을 담은 Handshake 전송
+		SendPacket(new ClientHandshakePacket(_name));
+
+		// 클라이언트 메인 루프
+		while (_client.Connected) {
+			// 유저 텍스트 입력받기
+			var line = Console.ReadLine();
+			if (string.IsNullOrEmpty(line)) continue;
+
+			// 텍스트가 명령어인지 체크
+			if (line.StartsWith("/")) {
+				var command = line[1..];
+
+				if (command.StartsWith("list")) {
+					// Player List 요청 패킷 전송
+					SendPacket(new ClientPlayerListPacket());
+				}
+				continue;
+			}
+
+			// 텍스트가 명령어가 아니라면 채팅 패킷 전송
+			SendPacket(new ClientTextPacket(line));
+		}
+	}
+
+	private void StartListeningPackets() {
+		// Stream#Read는 Blocking Call이기 때문에, 비동기 Task로 처리
+		Task.Run(() => {
+			while (_client.Connected) {
+				// 패킷 타입 읽어오기
+				var packetID = _reader.ReadByte();
+				var packetType = (PacketType) packetID;
+				var basePacket = packetType.CreatePacket(_reader);
+
+				switch (basePacket) {
+					case ClientTextPacket packet: {
+						Debug.Log($"[S -> C] {packet}");
+						break;
+					}
+					case ServerTextPacket packet: {
+						Console.WriteLine($"{packet.Player.Name}: {packet.Text}");
+						break;
+					}
+					case ServerHandshakePacket packet: {
+						_player = packet.Player;
+						Debug.Log($"Setting Player to {packet.Player}");
+						break;
+					}
+					case ServerPlayerListPacket packet: {
+						Console.Out.WriteLine($"접속한 유저({packet.Players.Count}명) : ");
+						packet.Players.ForEach(targetPlayer => { Console.Out.WriteLine($"- {targetPlayer.Name}"); });
+						break;
+					}
+				}
+			}
+		}).ContinueWith(t => {
+			if (t.IsFaulted) throw t.Exception!;
+		});
 	}
 
 	private void SendPacket(IPacket packet) {
