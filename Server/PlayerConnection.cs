@@ -4,7 +4,7 @@ using Common;
 using Common.Objects;
 
 public class PlayerConnection {
-	public Player Player { get; set; }
+	public Player? Player { get; set; }
 	public TcpClient Client { get; }
 
 	public NetworkStream Stream { get; }
@@ -23,7 +23,6 @@ public class PlayerConnection {
 	}
 
 	public PlayerConnection(TcpClient client) {
-		Player = new Player(string.Empty, Guid.Empty);
 		Client = client;
 
 		Stream = Client.GetStream();
@@ -32,7 +31,7 @@ public class PlayerConnection {
 	}
 
 	public void SendPacket(IPacket packet) {
-		Console.Out.WriteLine($"[S -> C({GetPlayerName()})] {packet}");
+		Debug.Log($"[S -> C({GetPlayerName()})] {packet}");
 		packet.Write(Writer);
 	}
 
