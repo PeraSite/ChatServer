@@ -86,21 +86,18 @@ public class ChatServer {
 			throw;
 		} finally {
 			// 클라이언트 접속 종료 처리
-			HandleClientQuit(client);
+			HandleClientQuit(playerConnection);
 		}
 	}
 
-	private void HandleClientQuit(TcpClient client) {
-		var playerConnection = GetPlayerConnection(client);
-		if (playerConnection == null) return;
-
+	private void HandleClientQuit(PlayerConnection playerConnection) {
 		var address = playerConnection.IP;
 
 		// PlayerConnection Dictionary 에서 삭제
 		_playerConnections.Remove(playerConnection);
 
 		// 클라이언트 닫기
-		client.Close();
+		playerConnection.Client.Close();
 
 		Debug.Log("[TCP 서버] 클라이언트 종료: IP 주소={0}, 포트 번호={1}", address.Address, address.Port);
 	}
