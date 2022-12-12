@@ -47,11 +47,17 @@ public class ChatClient {
 
 			// 텍스트가 명령어인지 체크
 			if (line.StartsWith("/")) {
-				var command = line[1..];
+				var command = line[1..].Trim().ToLower();
 
-				if (command.StartsWith("list")) {
-					// Player List 요청 패킷 전송
-					SendPacket(new ClientPlayerListPacket());
+				switch (command) {
+					case "list":
+						// Player List 요청 패킷 전송
+						SendPacket(new ClientPlayerListPacket());
+						break;
+					case "exit":
+						// 클라이언트 종료
+						_client.Close();
+						break;
 				}
 				continue;
 			}
