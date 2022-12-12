@@ -76,7 +76,7 @@ public class ChatServer {
 						break;
 					}
 					case ClientPlayerListPacket: {
-						playerConnection.SendPacket(new ServerPlayerListPacket(GetPlayerList()));
+						HandleClientPlayerListPacket(playerConnection);
 						break;
 					}
 				}
@@ -128,6 +128,10 @@ public class ChatServer {
 		foreach (var otherPlayerConnection in _playerConnections) {
 			otherPlayerConnection.SendPacket(new ServerTextPacket(player, packet.Text));
 		}
+	}
+
+	private void HandleClientPlayerListPacket(PlayerConnection playerConnection) {
+		playerConnection.SendPacket(new ServerPlayerListPacket(GetPlayerList()));
 	}
 #endregion
 
