@@ -56,7 +56,7 @@ public class ChatClient {
 						break;
 					case "exit":
 						// 클라이언트 종료
-						_client.Close();
+						Stop();
 						break;
 				}
 				continue;
@@ -65,6 +65,13 @@ public class ChatClient {
 			// 텍스트가 명령어가 아니라면 채팅 패킷 전송
 			SendPacket(new ClientTextPacket(line));
 		}
+	}
+
+	public void Stop() {
+		_writer.Close();
+		_reader.Close();
+		_stream.Close();
+		_client.Close();
 	}
 
 	private void StartListeningPackets() {
@@ -78,7 +85,7 @@ public class ChatClient {
 
 				switch (basePacket) {
 					case ClientTextPacket packet: {
-						Debug.Log($"[S -> C] {packet}");
+						Debug.Log($"[S -> C] {packet.Text}");
 						break;
 					}
 					case ServerTextPacket packet: {
