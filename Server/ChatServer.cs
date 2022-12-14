@@ -1,7 +1,9 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using Common;
 using Common.Objects;
 using Packets.Client;
+using Packets.Common;
 using Packets.Server;
 
 public class ChatServer {
@@ -95,6 +97,12 @@ public class ChatServer {
 	}
 
 	private void HandleClientQuit(PlayerConnection playerConnection) {
+		var player = playerConnection.Player;
+		if (player == null) return;
+
+		// 플레이어 Quit broadcast
+		Broadcast(new PlayerStatusPacket(player, PlayerStatusType.QUIT));
+
 		var address = playerConnection.IP;
 
 		// PlayerConnection Dictionary 에서 삭제
@@ -116,6 +124,8 @@ public class ChatServer {
 		playerConnection.SendPacket(new ServerHandshakePacket(player));
 		playerConnection.SendPacket(new ServerPlayerListPacket(GetPlayerList()));
 
+		// 플레이어 Join Broadcast
+		Broadcast(new PlayerStatusPacket(player, PlayerStatusType.JOIN));
 		Debug.Log($"New player joined : {player}");
 	}
 
@@ -137,6 +147,12 @@ public class ChatServer {
 #endregion
 
 #region Util
+	private void Broadcast(IPacket packet) {
+		foreach (var playerConnection in _playerConnections) {
+			playerConnection.SendPacket(packet);
+		}
+	}
+
 	private PlayerConnection? GetPlayerConnection(TcpClient client) {
 		return _playerConnections.FirstOrDefault(x => x.Client == client);
 	}
