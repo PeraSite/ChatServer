@@ -1,5 +1,6 @@
 ﻿using Common;
 using Packets.Client;
+using Packets.Common;
 using Packets.Server;
 
 public enum PacketType : byte {
@@ -10,7 +11,9 @@ public enum PacketType : byte {
 	Server_Text,
 
 	Client_PlayerList,
-	Server_PlayerList
+	Server_PlayerList,
+
+	Common_PlayerStatus
 }
 
 public static class PacketTypes {
@@ -23,6 +26,8 @@ public static class PacketTypes {
 
 		{PacketType.Client_PlayerList, _ => new ClientPlayerListPacket()},
 		{PacketType.Server_PlayerList, reader => new ServerPlayerListPacket(reader)},
+
+		{PacketType.Common_PlayerStatus, reader => new PlayerStatusPacket(reader)},
 	};
 
 	public static IPacket CreatePacket(this PacketType type, BinaryReader reader) {
