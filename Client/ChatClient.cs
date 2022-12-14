@@ -2,6 +2,7 @@
 using Common;
 using Common.Objects;
 using Packets.Client;
+using Packets.Common;
 using Packets.Server;
 
 public class ChatClient {
@@ -100,6 +101,16 @@ public class ChatClient {
 					case ServerPlayerListPacket packet: {
 						Console.Out.WriteLine($"접속한 유저({packet.Players.Count}명) : ");
 						packet.Players.ForEach(targetPlayer => { Console.Out.WriteLine($"- {targetPlayer.Name}"); });
+						break;
+					}
+					case PlayerStatusPacket packet: {
+						var statusType = packet.Type;
+						var statusName = statusType switch {
+							PlayerStatusType.JOIN => "접속",
+							PlayerStatusType.QUIT => "퇴장",
+							_ => "알 수 없음"
+						};
+						Console.Out.WriteLine($"[{packet.Player.Name}] {statusName}");
 						break;
 					}
 				}
