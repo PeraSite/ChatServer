@@ -31,6 +31,8 @@ public class PlayerConnection {
 	}
 
 	public void SendPacket(IPacket packet) {
+		if (!Stream.CanRead) return;
+		if (!Stream.CanWrite) return;
 		Debug.Log($"[S -> C({GetPlayerName()})] {packet}");
 		packet.Write(Writer);
 	}
