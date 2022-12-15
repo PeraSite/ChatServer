@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Sockets;
 using Common;
 using Common.Objects;
@@ -10,12 +11,17 @@ public class ChatServer {
 	private readonly TcpListener _server;
 	private readonly List<PlayerConnection> _playerConnections;
 
+	private ConcurrentQueue<(PlayerConnection playerConnection, IPacket packet)> _packets;
+
 	public ChatServer(int port) {
 		// TCP 서버 생성
 		_server = new TcpListener(IPAddress.Any, port);
 
 		// PlayerConnection 리스트 초기화
 		_playerConnections = new List<PlayerConnection>();
+
+		// 패킷 큐 초기화
+		_packets = new ConcurrentQueue<(PlayerConnection, IPacket)>();
 	}
 
 	~ChatServer() {
@@ -28,6 +34,25 @@ public class ChatServer {
 		_server.Start();
 
 		Debug.Log($"[TCP 서버] 서버 시작");
+
+		// 패킷 Dequeue Thread
+		var dequeueThread = new Thread(() => {
+			try {
+				while (true) {
+					if (_packets.TryDequeue(out var tuple)) {
+						var (playerConnection, packet) = tuple;
+
+						// handle packet
+						HandlePacket(packet, playerConnection);
+					}
+				}
+			} catch (Exception e) {
+				Console.WriteLine(e);
+				throw;
+			}
+		});
+		dequeueThread.Start();
+
 		try {
 			// 서버가 켜진 동안 클라이언트 접속 받기
 			while (true) {
@@ -35,10 +60,8 @@ public class ChatServer {
 				var client = _server.AcceptTcpClient();
 
 				// 새 스레드에서 클라이언트 처리
-				Task.Run(() => HandleNewClient(client))
-					.ContinueWith(t => {
-						if (t.IsFaulted) throw t.Exception!;
-					});
+				var thread = new Thread(() => HandleNewClient(client));
+				thread.Start();
 			}
 		} catch (Exception e) {
 			Console.WriteLine(e);
@@ -71,22 +94,11 @@ public class ChatServer {
 				var basePacket = packetType.CreatePacket(reader);
 				Debug.Log($"[C -> S] {basePacket}");
 
-				// 패킷 타입에 맞게 처리
-				switch (basePacket) {
-					case ClientTextPacket packet: {
-						HandleClientTextPacket(playerConnection, packet);
-						break;
-					}
-					case ClientHandshakePacket packet: {
-						HandleClientHandshakePacket(playerConnection, packet);
-						break;
-					}
-					case ClientPlayerListPacket: {
-						HandleClientPlayerListPacket(playerConnection);
-						break;
-					}
-				}
+				// 패킷 큐에 추가
+				_packets.Enqueue((playerConnection, basePacket));
 			}
+		} catch (IOException) {
+			// 클라이언트가 강제 종료했을 때 처리
 		} catch (Exception e) {
 			Console.WriteLine(e);
 			throw;
@@ -96,13 +108,26 @@ public class ChatServer {
 		}
 	}
 
+	private void HandlePacket(IPacket basePacket, PlayerConnection playerConnection) { // 패킷 타입에 맞게 처리
+		switch (basePacket) {
+			case ClientTextPacket packet: {
+				HandleClientTextPacket(playerConnection, packet);
+				break;
+			}
+			case ClientHandshakePacket packet: {
+				HandleClientHandshakePacket(playerConnection, packet);
+				break;
+			}
+			case ClientPlayerListPacket: {
+				HandleClientPlayerListPacket(playerConnection);
+				break;
+			}
+		}
+	}
+
 	private void HandleClientQuit(PlayerConnection playerConnection) {
 		var player = playerConnection.Player;
 		if (player == null) return;
-
-		// 플레이어 Quit broadcast
-		Broadcast(new PlayerStatusPacket(player, PlayerStatusType.QUIT));
-
 		var address = playerConnection.IP;
 
 		// PlayerConnection Dictionary 에서 삭제
@@ -110,6 +135,9 @@ public class ChatServer {
 
 		// 클라이언트 닫기
 		playerConnection.Client.Close();
+
+		// 플레이어 Quit broadcast
+		Broadcast(new PlayerStatusPacket(player, PlayerStatusType.QUIT));
 
 		Debug.Log("[TCP 서버] 클라이언트 종료: IP 주소={0}, 포트 번호={1}", address.Address, address.Port);
 	}
@@ -126,7 +154,7 @@ public class ChatServer {
 
 		// 플레이어 Join Broadcast
 		Broadcast(new PlayerStatusPacket(player, PlayerStatusType.JOIN));
-		Debug.Log($"New player joined : {player}");
+		Debug.Log($"[TCP 서버] 플레이어 Handshake: {player}");
 	}
 
 	private void HandleClientTextPacket(PlayerConnection playerConnection, ClientTextPacket packet) {
