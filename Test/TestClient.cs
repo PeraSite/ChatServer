@@ -88,6 +88,6 @@ public class TestClient {
 	}
 
 	private void SendPacket(IPacket packet) {
-		packet.Write(_writer);
+		_writer.Write(packet);
 	}
 }

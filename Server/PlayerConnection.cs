@@ -38,7 +38,7 @@ public class PlayerConnection {
 			return;
 		}
 		Debug.Log($"[S -> C({GetPlayerName()})] {packet}");
-		packet.Write(Writer);
+		Writer.Write(packet);
 	}
 
 	private string GetPlayerName() {

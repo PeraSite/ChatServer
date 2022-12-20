@@ -148,6 +148,6 @@ public class ChatClient {
 
 	private void SendPacket(IPacket packet) {
 		Debug.Log($"[C -> S] {packet}");
-		packet.Write(_writer);
+		_writer.Write(packet);
 	}
 }
