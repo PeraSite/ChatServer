@@ -7,6 +7,9 @@ const int SERVER_PORT = 9000;
 Console.InputEncoding = Encoding.Unicode;
 Console.OutputEncoding = Encoding.Unicode;
 
+// 서버는 항상 디버깅 출력
+Debug.Enabled = true;
+
 // 서버 시작
 var server = new ChatServer(SERVER_PORT);
 server.Start();

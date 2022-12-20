@@ -1,7 +1,7 @@
 ﻿using JetBrains.Annotations;
 
 public static class Debug {
-	private static readonly bool Enabled = Environment.GetEnvironmentVariable("DEBUG") == "1";
+	public static bool Enabled;
 
 	public static void Log(string message) {
 		if (Enabled) {
