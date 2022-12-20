@@ -1,8 +1,15 @@
 ﻿using System.Text;
 
 // 설정
-const string SERVERIP = "127.0.0.1";
 const int SERVER_PORT = 9000;
+
+// 서버 IP 입력 받기
+Console.Out.Write("서버 IP : ");
+var serverIP = Console.ReadLine();
+if (string.IsNullOrEmpty(serverIP)) {
+	Console.Out.WriteLine("올바르지 않은 IP입니다.");
+	return;
+}
 
 // 콘솔 입출력 한글 깨짐 수정
 Console.InputEncoding = Encoding.Unicode;
@@ -17,5 +24,5 @@ if (string.IsNullOrEmpty(name)) {
 }
 
 // 클라이언트 시작
-var client = new ChatClient(name, SERVERIP, SERVER_PORT);
+var client = new ChatClient(name, serverIP, SERVER_PORT);
 client.Start();
