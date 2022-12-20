@@ -77,7 +77,7 @@ public class ChatClient {
 
 	private void StartListeningPackets() {
 		// Stream#Read는 Blocking Call이기 때문에, 비동기 Task로 처리
-		Task.Run(() => {
+		var listeningThread = new Thread(() => {
 			while (_client.Connected) {
 				// 패킷 타입 읽어오기
 				var packetID = _reader.ReadByte();
@@ -115,9 +115,8 @@ public class ChatClient {
 					}
 				}
 			}
-		}).ContinueWith(t => {
-			if (t.IsFaulted) throw t.Exception!;
 		});
+		listeningThread.Start();
 	}
 
 	private void SendPacket(IPacket packet) {
