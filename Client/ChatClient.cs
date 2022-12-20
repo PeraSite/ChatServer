@@ -18,15 +18,22 @@ public class ChatClient {
 	public ChatClient(string name, string ip, int port) {
 		_name = name;
 
+		// TcpClient 생성 및 접속
 		_client = new TcpClient();
 		_client.Connect(ip, port);
 
+		// BinaryWriter, BinaryReader을 NetworkStream으로 생성
 		_stream = _client.GetStream();
 		_writer = new BinaryWriter(_stream);
 		_reader = new BinaryReader(_stream);
 	}
 
 	~ChatClient() {
+		CloseClient();
+	}
+
+	private void CloseClient() {
+		// TCP 클라이언트, Stream 닫기
 		_writer.Close();
 		_reader.Close();
 		_stream.Close();
@@ -57,7 +64,7 @@ public class ChatClient {
 						break;
 					case "exit":
 						// 클라이언트 종료
-						Stop();
+						CloseClient();
 						break;
 				}
 				continue;
@@ -68,55 +75,70 @@ public class ChatClient {
 		}
 	}
 
-	public void Stop() {
-		_writer.Close();
-		_reader.Close();
-		_stream.Close();
-		_client.Close();
-	}
-
 	private void StartListeningPackets() {
-		// Stream#Read는 Blocking Call이기 때문에, 비동기 Task로 처리
+		// Stream#Read는 Blocking Call이므로 별도의 스레드에서 실행
 		var listeningThread = new Thread(() => {
 			while (_client.Connected) {
 				// 패킷 타입 읽어오기
 				var packetID = _reader.ReadByte();
 				var packetType = (PacketType) packetID;
+
+				// 패킷 객체 생성
 				var basePacket = packetType.CreatePacket(_reader);
 
 				switch (basePacket) {
 					case ClientTextPacket packet: {
-						Debug.Log($"[S -> C] {packet.Text}");
+						HandleClientTextPacket(packet);
 						break;
 					}
 					case ServerTextPacket packet: {
-						Console.WriteLine($"{packet.Player.Name}: {packet.Text}");
+						HandleServerTextPacket(packet);
 						break;
 					}
 					case ServerHandshakePacket packet: {
-						_player = packet.Player;
-						Debug.Log($"Setting Player to {packet.Player}");
+						HandleServerHandshakePacket(packet);
 						break;
 					}
 					case ServerPlayerListPacket packet: {
-						Console.Out.WriteLine($"접속한 유저({packet.Players.Count}명) : ");
-						packet.Players.ForEach(targetPlayer => { Console.Out.WriteLine($"- {targetPlayer.Name}"); });
+						HandleServerPlayerListPacket(packet);
 						break;
 					}
 					case PlayerStatusPacket packet: {
-						var statusType = packet.Type;
-						var statusName = statusType switch {
-							PlayerStatusType.JOIN => "접속",
-							PlayerStatusType.QUIT => "퇴장",
-							_ => "알 수 없음"
-						};
-						Console.Out.WriteLine($"[{packet.Player.Name}] {statusName}");
+						HandlePlayerStatusPacket(packet);
 						break;
 					}
 				}
 			}
 		});
 		listeningThread.Start();
+	}
+
+	private void HandleClientTextPacket(ClientTextPacket packet) {
+		Debug.Log($"[S -> C] {packet.Text}");
+	}
+
+	private void HandleServerTextPacket(ServerTextPacket packet) {
+		Console.WriteLine($"{packet.Player.Name}: {packet.Text}");
+	}
+
+	private void HandleServerHandshakePacket(ServerHandshakePacket packet) {
+		_player = packet.Player;
+		Debug.Log($"Setting Player to {packet.Player}");
+	}
+
+	private void HandleServerPlayerListPacket(ServerPlayerListPacket packet) {
+		Console.Out.WriteLine($"접속한 유저({packet.Players.Count}명) : ");
+		packet.Players.ForEach(targetPlayer => { Console.Out.WriteLine($"- {targetPlayer.Name}"); });
+	}
+
+	private void HandlePlayerStatusPacket(PlayerStatusPacket packet) {
+		var statusType = packet.Type;
+		var statusName = statusType switch {
+			PlayerStatusType.JOIN => "접속",
+			PlayerStatusType.QUIT => "퇴장",
+			_ => "알 수 없음"
+		};
+		Console.Out.WriteLine($"[{packet.Player.Name}] {statusName}");
 	}
 
 	private void SendPacket(IPacket packet) {
