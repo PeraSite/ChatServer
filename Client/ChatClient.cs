@@ -86,31 +86,36 @@ public class ChatClient {
 				// 패킷 객체 생성
 				var basePacket = packetType.CreatePacket(_reader);
 
-				switch (basePacket) {
-					case ClientTextPacket packet: {
-						HandleClientTextPacket(packet);
-						break;
-					}
-					case ServerTextPacket packet: {
-						HandleServerTextPacket(packet);
-						break;
-					}
-					case ServerHandshakePacket packet: {
-						HandleServerHandshakePacket(packet);
-						break;
-					}
-					case ServerPlayerListPacket packet: {
-						HandleServerPlayerListPacket(packet);
-						break;
-					}
-					case PlayerStatusPacket packet: {
-						HandlePlayerStatusPacket(packet);
-						break;
-					}
-				}
+				// 패킷 핸들링
+				HandlePacket(basePacket);
 			}
 		});
 		listeningThread.Start();
+	}
+
+	private void HandlePacket(IPacket basePacket) {
+		switch (basePacket) {
+			case ClientTextPacket packet: {
+				HandleClientTextPacket(packet);
+				break;
+			}
+			case ServerTextPacket packet: {
+				HandleServerTextPacket(packet);
+				break;
+			}
+			case ServerHandshakePacket packet: {
+				HandleServerHandshakePacket(packet);
+				break;
+			}
+			case ServerPlayerListPacket packet: {
+				HandleServerPlayerListPacket(packet);
+				break;
+			}
+			case PlayerStatusPacket packet: {
+				HandlePlayerStatusPacket(packet);
+				break;
+			}
+		}
 	}
 
 	private void HandleClientTextPacket(ClientTextPacket packet) {
